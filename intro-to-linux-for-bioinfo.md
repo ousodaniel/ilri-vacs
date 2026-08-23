@@ -214,17 +214,13 @@ However, sometimes it is possible to get things done with the `command` alone, o
         Click to toggle contents of <b style="color:blue">Using Tab Completion</b>
     </summary>
 
-    <p>
-        <code>Tab</code> completion is a shell feature (used in Linux, macOS, and other Unix-like systems)
+    `Tab` completion is a shell feature (used in Linux, macOS, and other Unix-like systems)
         that auto-completes commands, file names, directory paths, or other inputs when you press the
-        <code>Tab</code> key on your keyboard.
-    </p>
+        `Tab` key on your keyboard.
 
-    <ul>
-        <li>Start typing a command or file name and press <code>Tab</code></li>
-        <li>The shell will complete it if there's only one possibility</li>
-        <li>Press <code>Tab</code> twice to see all possibilities</li>
-    </ul>
+    - Start typing a command or file name and press `Tab`
+    - The shell will complete it if there's only one possibility
+    - Press `Tab` twice to see all possibilities
 </details>
 
 <details>
@@ -232,15 +228,11 @@ However, sometimes it is possible to get things done with the `command` alone, o
         Click to toggle contents of <b style='color:blue'>Command History</b>
     </summary>
     
-    <p>
-        We write code because we are lazy and prefer not to unnecessarily repeat tasks. Linux stores your command line history in a register to allow quick retireval for repeat use cases--saved time.
-    </p>
+    We write code because we are lazy and prefer not to unnecessarily repeat tasks. Linux stores your command line history in a register to allow quick retireval for repeat use cases--saved time.
     
-    <ul>
-        <li><code>Up/Down</code> arrows to navigate through previous commands</li>
-        <li><code>history</code> to list recent commands: note the register number of your command and rerun it by preceding the number with a <code>!</code> (exclamation).</li>
-        <li><code>Ctrl+R</code> to search command history</li>
-    </ul>
+    - `Up/Down` arrows to navigate through previous commands
+    - `history` to list recent commands: note the register number of your command and rerun it by preceding the number with a <code>!</code> (exclamation).
+    - `Ctrl+R` to search command history
 </details>
 
 **Getting Help**
@@ -293,12 +285,10 @@ Basic Linux commands are inspired by natural language (English), thus easy to wo
         Click to toggle contents of <b style='color:blue'>System Information</b>
     </summary>
     
-    <ul>
-        <li><code>whoami</code>: Display current username</li>
-        <li><code>date</code>: Show current date and time</li>
-        <li><code>echo \<text\></code>: Display text</li>
-        <li><code>uname -a</code>: Show system information</li>
-    </ul>
+    - `whoami`: Display current username
+    - `date`: Show current date and time
+    - `echo <text>`: Display text
+    - `uname -a`: Show system information
 </details>
 
 ---
@@ -390,42 +380,27 @@ grep -l "ATGC" *.fa
 # Show context (3 lines before and after)
 grep -B 3 -A 3 "ATGC" sequence.fa
 ```
-<details>
-    <summary>
-        Click to toggle contents of <b style="color:blue">Wildcards and Pattern Matching</b>
-    </summary>
 
-    <ul>
-        <li>
-            <code>*</code>: Matches any number of characters
-            <ul>
-                <li><code>*.fastq</code>: All files with <code>.fastq</code> extension</li>
-                <li><code>sample_*</code>: All files starting with <code>sample_</code></li>
-            </ul>
-        </li>
+[//]: # (**Wildcards and Pattern Matching**)
 
-        <li>
-            <code>?</code>: Matches a single character
-            <ul>
-                <li><code>sample?.txt</code>: Matches a single character in that position</li>
-            </ul>
-        </li>
+[//]: # ()
+[//]: # (- `*`: Matches any number of characters)
 
-        <li>
-            <code>[]</code>: Matches one character from a set
-            <ul>
-                <li><code>sample[123].txt</code>: Matches <code>sample1.txt</code>, <code>sample2.txt</code>, or <code>sample3.txt</code></li>
-            </ul>
-        </li>
+[//]: # (  - `*.fastq`: All files with .fastq extension)
 
-        <li>
-            <code>{}</code>: Groups multiple patterns
-            <ul>
-                <li><code>{*.fastq,*.fq}</code>: Matches files ending in <code>.fastq</code> or <code>.fq</code></li>
-            </ul>
-        </li>
-    </ul>
-</details>
+[//]: # (  - `sample_*`: All files starting with "sample_")
+
+[//]: # (- `?`: Matches a single character)
+
+[//]: # (  - `sample?.txt`: Matches sample1.txt, sampleA.txt, etc.)
+
+[//]: # (- `[]`: Matches any character within brackets)
+
+[//]: # (  - `sample[123].txt`: Matches sample1.txt, sample2.txt, or sample3.txt)
+
+[//]: # (- `{}`: Group of patterns)
+
+[//]: # (  - `{*.fastq,*.fq}`: Matches files ending in .fastq or .fq)
 
 
 ---
@@ -456,32 +431,38 @@ Linux commands use three standard streams:
   # Append current date to a log file
   date >> log.txt
   ```
-<details>
-    <summary>
-        Click to toggle contents of <b style="color:blue">Input and Output Redirection</b>
-    </summary>
 
-    <ul>
-        <li>
-            <code>2&gt;</code>: Redirect <code>stderr</code> to a file
-            <pre><code class="language-bash"># Save error messages to a file
-find / -name "*.fa" 2&gt; errors.log</code></pre>
-        </li>
+[//]: # (- `2>`: Redirect `stderr` to a file)
 
-        <li>
-            <code>2&gt;&amp;1</code>: Redirect <code>stderr</code> to the same destination as <code>stdout</code>
-            <pre><code class="language-bash"># Save both output and errors
-ls /bin /nonexistent &gt; output.txt 2&gt;&amp;1</code></pre>
-        </li>
+[//]: # (  ```bash)
 
-        <li>
-            <code>&lt;</code>: Use a file as <code>stdin</code>
-            <pre><code class="language-bash"># Use file as input
-sort &lt; unsorted.txt</code></pre>
-        </li>
-    </ul>
+[//]: # (  # Save error messages to a file)
 
-</details>
+[//]: # (  find / -name "*.fa" 2> errors.log)
+
+[//]: # (  ```)
+
+[//]: # ()
+[//]: # (- `2>&1`: Redirect `stderr` to same destination as `stdout`)
+
+[//]: # (  ```bash)
+
+[//]: # (  # Save both output and errors)
+
+[//]: # (  ls /bin /nonexistent > output.txt 2>&1)
+
+[//]: # (  ```)
+
+[//]: # ()
+[//]: # (- `<`: Use file as `stdin`)
+
+[//]: # (  ```bash)
+
+[//]: # (  # Use file as input)
+
+[//]: # (  sort < unsorted.txt)
+
+[//]: # (  ```)
 
 <!-- - `<<`: Provide multi-line input (document) realtime; notice End Of File marker to end of input
   ```bash
