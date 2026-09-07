@@ -420,6 +420,11 @@ Linux commands use three standard streams:
   EOF
   ``` -->
 
+<!-- - `<<<`: Provide single-line input (string) realtime
+  ```bash
+  cat <<< "ATGCTAGCTAGCTAGCT GCATGCATGCATGCAT"
+  ``` -->
+
 #### Pipes, Filters, and Preprocessing
 
 **The Pipe Operator**
@@ -777,7 +782,8 @@ chmod +x extract_long_seqs.sh
 ---
 ### Introduction to High-Performance Computing with SLURM
 ---
-
+<!--python3 -m http.server 8000 --bind 127.0.0.1 --directory ~/mydata
+-->
 #### HPC Concepts
 
 **High-Performance Computing (HPC)**
@@ -852,7 +858,7 @@ SLURM (Simple Linux Utility for Resource Management) is a workload manager for L
   ```
 
 #### Package management
-THe HPC  is a shared space. User requirements may vary substantially, there is a centralised way to ensure module/software/package needs are met from a central place (eliminate/minimise redundancy). Availability of modules is managed using the `module` command.
+The HPC  is a shared space where user requirements may vary substantially. However, there is a centralised way to ensure module/software/package needs are met from a central place (eliminate/minimise redundancy). Availability of modules is managed using the `module` command.
 
 ```bash
 # List available module
@@ -869,6 +875,19 @@ module unload <module_name> [<module_name1> <module_name2> ...]
 
 # Reset module availability
 module purge
+```
+
+#### Shipping files in/out HPC
+To move files between the HPC and another computer (your local included), data has to move over internet. Unlike moving the data within the same system, this introduces risks. Therefore, the normal `cp` or `mv` cannot work - they are insecure and simplistic. Instead, we use `scp` (secure copy), or it big brother `rsync`. The core form is similar to `cp` (`<source>` to `<destination>`), except the remote address is formated differently.
+
+From your local computer:
+```bash
+# Copy from remote to local
+rsync -a douso@hpc.ilri.cgiar.org:/home/douso/results/result.txt ~/results/
+
+# Copy from local to remote
+rsync -a ~/myproject/ douso@hpc:/home/douso/myproject/
+
 ```
 
 #### Creating SLURM Job Scripts
