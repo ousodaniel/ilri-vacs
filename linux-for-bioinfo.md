@@ -167,6 +167,11 @@ May not be updated.
 - **Current directory**: `.` (single fullstop)
 - **Previous directory**: `-` (hyphen)
 
+<!--
+<p align="center">
+    <a href="02-linux-for-bioinfo-cli-basics.md">Next →</a>
+</p>
+-->
 ---
 ### Command Line Basics
 ---
@@ -260,6 +265,15 @@ Basic Linux commands are inspired by natural language (English), thus may be eas
 - `date`: Show current date and time
 - `echo <text>`: Display text
 - `uname -a`: Show system information
+
+
+<!--
+<p align="center">
+    <a href="01-linux-for-bioinfo-intro.md">← Previous</a>
+    &nbsp;&nbsp; | &nbsp;&nbsp;
+    <a href="03-linux-for-bioinfo-working-files.md">Next →</a>
+</p>
+-->
 
 ---
 ### Working with Files and Directories
@@ -362,6 +376,14 @@ grep -B 3 -A 3 "ATGC" sequence.fa
   - `sample[123].txt`: Matches `sample1.txt`, `sample2.txt`, or `sample3.txt`
 - `{}`: Group of patterns
   - `{*.fastq,*.fq}`: Matches files ending in `.fastq` or `.fq`
+
+<!--
+<p align="center">
+    <a href="02-linux-for-bioinfo-cli-basics.md">← Previous</a>
+    &nbsp;&nbsp; | &nbsp;&nbsp;
+    <a href="04-linux-for-bioinfo-redirection-pipes.md">Next →</a>
+</p>
+-->
 
 ---
 ### Linux Redirection and Pipes
@@ -562,6 +584,14 @@ May not be updated.
 | `END {}`    | After input             |
 
 </details>
+
+<!--
+<p align="center">
+    <a href="03-linux-for-bioinfo-working-files.md">← Previous</a>
+    &nbsp;&nbsp; | &nbsp;&nbsp;
+    <a href="05-linux-for-bioinfo-shell-scripting-basics.md">Next →</a>
+</p>
+-->
 
 ---
 ### Shell Scripting Basics
@@ -779,6 +809,14 @@ chmod +x extract_long_seqs.sh
 ./extract_long_seqs.sh sequences.fa 1000
 ```
 
+<!--
+<p align="center">
+    <a href="04-linux-for-bioinfo-redirection-pipes.md">← Previous</a>
+    &nbsp;&nbsp; | &nbsp;&nbsp;
+    <a href="06-linux-for-bioinfo-hpc.md">Next →</a>
+</p>
+-->
+
 ---
 ### Introduction to High-Performance Computing with SLURM
 ---
@@ -961,6 +999,14 @@ echo "CPUs per task: $SLURM_CPUS_PER_TASK"
 echo "Node list: $SLURM_JOB_NODELIST"
 ```
 
+<!--
+<p align="center">
+    <a href="05-linux-for-bioinfo-shell-scripting-basics.md">← Previous</a>
+    &nbsp;&nbsp; | &nbsp;&nbsp;
+    <a href="07-linux-for-bioinfo-slurm-workflows.md">Next →</a>
+</p>
+-->
+
 ---
 ### Bioinformatics Workflows with SLURM
 ---
@@ -1009,6 +1055,14 @@ end_time=$(date +%s)
 elapsed_time=$((end_time - start_time))
 echo "Job completed in $elapsed_time seconds"
 ```
+
+<!--
+<p align="center">
+    <a href="06-linux-for-bioinfo-hpc.md">← Previous</a>
+    &nbsp;&nbsp; | &nbsp;&nbsp;
+    <a href="08-linux-for-bioinfo-refs.md">Next →</a>
+</p>
+-->
 
 ## Additional Resources
 
@@ -1060,3 +1114,9 @@ echo "Job completed in $elapsed_time seconds"
 | **Variable** | A named storage location |
 | **Wildcard** | A character that represents multiple characters |
 
+
+<!--
+<p align="center">
+    <a href="07-linux-for-bioinfo-slurm-workflows.md">← Previous</a>
+</p>
+-->
