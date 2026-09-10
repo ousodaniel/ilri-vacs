@@ -24,11 +24,12 @@ fi
 
 # Setup: Load modules
 module load miniforge3 2>/dev/null || echo "Your Sys Admin prefers a lean HPC, no system-wide conda/mamba support - figure it out" # check conda/mamba support
-##mamba env create -f envs/variant_calling.yml
+##mamba env create -f envs/requirements.yaml
 ##mamba activate varcall
 
 # Ad-hoc setup for env: miniforge management
-source ~/vacs-bioinfo/.local/bin/miniforge3/etc/profile.d/mamba.sh # we will share a single environment - avoid redundancy; resource efficiency
+export MAMBA_ROOT_PREFIX="${HOME}"/vacs-bioinfo/.local/bin/miniforge3
+source "${MAMBA_ROOT_PREFIX}"/etc/profile.d/mamba.sh # we will share a single environment - avoid redundancy; resource efficiency
 mamba activate /var/scratch/global/douso/vacs/varcall/envs # env identified by path rather than name
 
 # Ad-hoc setup for env: R
@@ -57,7 +58,7 @@ threads=${SLURM_CPUS_PER_TASK:-$(( ($(nproc) * pct_processor_to_use + 50) / 100 
 n_samples=4
 n_reads=2000000
 
-shuf -n "$n_samples" "${res_dir}"/raw_data/metadata/SRR_Acc_List.txt |
+shuf -n4 "$n_samples" "${res_dir}"/raw_data/metadata/SRR_Acc_List.txt |
 while read -r samp_id; do
     echo "Sampling $samp_id"
     seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_1.fastq.gz $n_reads | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_1.fastq.gz
@@ -68,19 +69,18 @@ done
 # Quality assessment
 mkdir -p "${proj_dir}"/qc/fastqc_raw
 fastqc -t $threads -o "${proj_dir}"/qc/fastqc_raw "${res_dir}"/raw_data/fastq/*_sub*.fastq.gz
-multiqc "${res_dir}"/raw_data/fastq/*_sub*.fastq.gz -o "${proj_dir}"/qc/fastqc_raw
+multiqc "${res_dir}"/qc/fastqc_raw -o "${proj_dir}"/qc/fastqc_raw
 
 # Trimming
-mapfile -f samples < <(shuf -n1 "${proj_dir}"/raw_data/metadata/SRR_Acc_List_sub.txt)
-sample="samples[0]"
+mapfile -t samples < "${proj_dir}"/raw_data/metadata/SRR_Acc_List_sub.txt
 
 counter0=0
-for sample in samples[@]; do
+for sample in "${samples[@]}"; do
   ((counter0 += 1))
-  echo "Currently trimming sample $sample... (${counter0}/${#samples[@]})"
+  echo "Currently trimming sample ${sample}... (${counter0}/${#samples[@]})"
   fastp \
     -i "${proj_dir}"/raw_data/fastq/${sample}_sub_1.fastq.gz -I "${proj_dir}"/raw_data/fastq/${sample}_sub_2.fastq.gz \
-    -o "${proj_dir}"/fastq/trimmed/${sample}_sub_1.trim.fastq.gz -O "${proj_dir}"/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
+    -o "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_1.trim.fastq.gz -O "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
     --detect_adapter_for_pe \
     --qualified_quality_phred 20 \
     --length_required 50 \
@@ -91,8 +91,8 @@ done
 
 # Quality assessment after trimming
 mkdir -p "${proj_dir}"/qc/fastqc_trim
-fastqc -t $threads -o "${proj_dir}"/qc/fastqc_trim "${proj_dir}"/fastq/trimmed/*.fastq.gz
-multiqc "${proj_dir}"/fastq/trimmed/ -o "${proj_dir}"/qc/fastqc_trim
+fastqc -t $threads -o "${proj_dir}"/qc/fastqc_trim "${proj_dir}"/raw_data/fastq/trimmed/*.fastq.gz
+multiqc "${proj_dir}"/qc/fastqc_trim -o "${proj_dir}"/qc/fastqc_trim
 
 # Indexing
 cd "${proj_dir}"/raw_data/reference
@@ -105,28 +105,28 @@ gatk CreateSequenceDictionary -R "${res_dir}"/raw_data/reference/assembly/Vungui
 
 # Align
 counter1=0
-for sample in samples[@]; do
+for sample in "${samples[@]}"; do
   ((counter1 += 1))
-  echo "Currently aligning sample $sample... (${counter1}/${#samples[@]})"
+  echo "Currently aligning sample ${sample}... (${counter1}/${#samples[@]})"
   bwa mem -t $threads \
     -R "@RG\tID:${sample}\tSM:${sample}\tPL:ILLUMINA\tLB:${sample}_lib1" \
     "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
-    "${proj_dir}"/fastq/trimmed/${sample}_sub_1.trim.fastq.gz "${proj_dir}"/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
+    "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_1.trim.fastq.gz "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
     | samtools sort -@ $threads -o "${proj_dir}"/alignments/${sample}_sub.sorted.bam -
   samtools index "${proj_dir}"/alignments/${sample}_sub.sorted.bam
 done
 
 # Post-alignment QC
-for sample in samples[@]; do
+for sample in "${samples[@]}"; do
   samtools flagstat "${proj_dir}"/alignments/${sample}_sub.dedup.bam > "${proj_dir}"/qc/${sample}_sub.flagstat.txt
   mosdepth --by 10000 -t $threads "${proj_dir}"/qc/${sample}_sub "${proj_dir}"/alignments/${sample}_sub.dedup.bam
 done
 
 # Variant calling
 counter2=0
-for sample in samples[@]; do
+for sample in "${samples[@]}"; do
   ((counter2 += 1))
-  echo "Currently variant calling sample $sample... (${counter2}/${#samples[@]})"
+  echo "Currently variant calling sample ${sample}... (${counter2}/${#samples[@]})"
   gatk HaplotypeCaller \
     -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
     -I "${proj_dir}"/alignments/${sample}_sub.dedup.bam \
