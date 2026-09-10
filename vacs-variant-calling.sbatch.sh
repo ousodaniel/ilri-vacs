@@ -99,7 +99,7 @@ cd "${proj_dir}"/raw_data/reference
 bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
 "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz
 samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz.fai \
-"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz
+"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz # requires a bgzip-compressed ref
 gatk CreateSequenceDictionary -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
 -O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.dict
 
@@ -110,10 +110,22 @@ for sample in "${samples[@]}"; do
   echo "Currently aligning sample ${sample}... (${counter1}/${#samples[@]})"
   bwa mem -t $threads \
     -R "@RG\tID:${sample}\tSM:${sample}\tPL:ILLUMINA\tLB:${sample}_lib1" \
-    "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+    "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
     "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_1.trim.fastq.gz "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
     | samtools sort -@ $threads -o "${proj_dir}"/alignments/${sample}_sub.sorted.bam -
   samtools index "${proj_dir}"/alignments/${sample}_sub.sorted.bam
+done
+
+# Deduplication: By marking method
+counter=0
+for sample in "${samples[@]}"; do
+  ((counter += 1))
+  echo "Currently marking duplicates for sample ${sample}... (${counter}/${#samples[@]})"
+  gatk MarkDuplicates \
+    -I "${proj_dir}"/alignments/${sample}_sub.sorted.bam \
+    -O "${proj_dir}"/alignments/${sample}_sub.dedup.bam \
+    -M "${proj_dir}"/alignments/${sample}_sub.dup_metrics.txt
+  samtools index "${proj_dir}"/alignments/${sample}_sub.dedup.bam
 done
 
 # Post-alignment QC
