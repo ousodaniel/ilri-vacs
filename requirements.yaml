@@ -1,0 +1,26 @@
+name: varcall-cowpea
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - sra-tools>=3.1
+  - fastqc>=0.12
+  - fastp>=0.23
+  - multiqc>=1.20
+  - bwa>=0.7.17
+  - samtools>=1.19
+  - gatk4>=4.5
+  - bcftools>=1.19
+  - vcftools>=0.1.16
+  - bedtools>=2.31
+  - plink
+  - snpeff>=5.2
+  - mosdepth>=0.3.6
+  - seqtk
+#  - igv
+#  - r-base>=4.3
+#  - r-ggplot2
+#  - r-vcfr
+
+
+## Roughly 20 mins on 2 cores
