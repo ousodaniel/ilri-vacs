@@ -375,7 +375,7 @@ cd "${proj_dir}"/raw_data/reference
 bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
 ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz 
 samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz.fai \
-${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz 
+${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz # requires a bgzip-compressed ref
 gatk CreateSequenceDictionary -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
 -O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.dict
 ```
@@ -387,7 +387,7 @@ gatk CreateSequenceDictionary -R ${res_dir}/raw_data/reference/assembly/Vunguicu
 ```bash
 bwa mem -t $threads \
   -R "@RG\tID:${sample}\tSM:${sample}\tPL:ILLUMINA\tLB:${sample}_lib1" \
-  ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+  ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
   "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_1.trim.fastq.gz "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
   | samtools sort -@ $threads -o "${proj_dir}"/alignments/${sample}_sub.sorted.bam -
 samtools index "${proj_dir}"/alignments/${sample}_sub.sorted.bam
@@ -783,6 +783,9 @@ sample=$(sed -n "${SLURM_ARRAY_TASK_ID}p" SRR_Acc_List.txt)
 ---
 
 ## Appendix B — Troubleshooting FAQ
+
+**`faidx` cannot index gzipped ref**
+Your reference FASTA needs to be referenced with `bgzip` from `samtools`.
 
 **"My mapping rate is unexpectedly low (<80%)."**
 Check you downloaded/decompressed FASTQ correctly (a truncated download looks superficially fine but aligns poorly); confirm read 1/read 2 files weren't swapped; confirm the reference FASTA matches the annotation version you're using.
