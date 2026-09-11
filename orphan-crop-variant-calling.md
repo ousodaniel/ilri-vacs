@@ -242,7 +242,7 @@ module load miniforge3 2>/dev/null || echo "Your Sys Admin prefers a lean HPC, n
 ##mamba activate varcall
 
 # Ad-hoc setup for env: miniforge management
-export MAMBA_ROOT_PREFIX="${HOME}"/vacs-bioinfo/.local/bin/miniforge3
+export MAMBA_ROOT_PREFIX=/var/scratch/global/douso/vacs-bioinfo/.local/bin/miniforge3
 source "${MAMBA_ROOT_PREFIX}"/etc/profile.d/mamba.sh # we will share a single environment - avoid redundancy; resource efficiency
 mamba activate /var/scratch/global/douso/vacs/varcall/envs # env identified by path rather than name
 
