@@ -225,7 +225,7 @@ set -euo pipefail
 ```bash
 # Setup: Proj Org; FS structure, Link resource directory (contain universal [shared] files: data, tools)
 if [ ! -e ~/vacs-bioinfo ]; then
-  ln -s /var/scratch/global/douso/vacs-bioinfo
+  ln -s /var/scratch/global/douso/vacs-bioinfo ~
   res_dir="$HOME/vacs-bioinfo/variant-calling"
   proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
   mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastq_raw,fastq_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
