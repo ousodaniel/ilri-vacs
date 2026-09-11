@@ -247,11 +247,13 @@ source "${MAMBA_ROOT_PREFIX}"/etc/profile.d/mamba.sh # we will share a single en
 mamba activate /var/scratch/global/douso/vacs/varcall/envs # env identified by path rather than name
 
 # Ad-hoc setup for env: R
-export PATH=~/vacs-bioinfo/.local/bin/R/bin:$PATH
+export PATH=/var/scratch/global/douso/vacs-bioinfo/.local/bin/R/bin:$PATH
+export res_dir="$HOME/vacs-bioinfo/variant-calling"
+export proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
 
 # Setup: Threads
 pct_processor_to_use=75 # the percentage of your local compute (PC) resources to commit for the analysis
-threads=${SLURM_CPUS_PER_TASK:-$(( ($(nproc) * pct_processor_to_use + 50) / 100 ))}
+export threads=${SLURM_CPUS_PER_TASK:-$(( ($(nproc) * 75 + 50) / 100 ))}
 ```
 
 ---
