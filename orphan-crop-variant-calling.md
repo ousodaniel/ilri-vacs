@@ -227,12 +227,12 @@ set -euo pipefail
 if [ ! -e ~/vacs-bioinfo ]; then
   ln -s /home/douso/vacs-bioinfo ~/vacs-bioinfo
   res_dir="$HOME/vacs-bioinfo/variant-calling"
-  proj_dir="$HOME/projects/vacs-bioinfo/variant-calling"
+  proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
   mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastq_raw,fastq_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
 else
   if [ -e ~/vacs-bioinfo ] && [ ! -L ~/vacs-bioinfo ]; then
     res_dir="$HOME/vacs-bioinfo/variant-calling"
-    proj_dir="$HOME/vacs-bioinfo/variant-calling"
+    proj_dir="/var/scratch/global/$USER//vacs-bioinfo/variant-calling"
   fi
 fi
 
@@ -297,10 +297,10 @@ done < "${proj_dir}"/raw_data/metadata/SRR_Acc_List.txt
 **Design choice — why subsample reads, not just subsample samples/accessions:** even a single 10–15X WGS accession is tens of millions of read pairs. For a workshop (constrained setting; e.g. laptop), we additionally subsample reads *and* restrict to chromosome `Vu03` (see Module 5) so each participant's jobs return in minutes rather than hours:
 
 ```bash
-n_samples=2 
+n_samples=1
 n_reads=2000000
 
-shuf -n4 "$n_samples" "${res_dir}"/raw_data/metadata/SRR_Acc_List.txt |
+shuf -n "$n_samples" "${res_dir}"/raw_data/metadata/SRR_Acc_List.txt |
 while read -r samp_id; do
     echo "Sampling $samp_id"
     seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_1.fastq.gz $n_reads | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_1.fastq.gz
@@ -372,12 +372,12 @@ multiqc "${proj_dir}"/qc/fastqc_trim -o "${proj_dir}"/qc/fastqc_trim
 
 ```bash
 cd "${proj_dir}"/raw_data/reference
-bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
-${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz 
-samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz.fai \
-${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz # requires a bgzip-compressed ref
-gatk CreateSequenceDictionary -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
--O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.dict
+bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa \
+${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz 
+samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz.fai \
+${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz # requires a bgzip-compressed ref
+gatk CreateSequenceDictionary -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
+-O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.dict
 ```
 
 ### 5.2 Align, adding read groups at alignment time
@@ -387,7 +387,7 @@ gatk CreateSequenceDictionary -R ${res_dir}/raw_data/reference/assembly/Vunguicu
 ```bash
 bwa mem -t $threads \
   -R "@RG\tID:${sample}\tSM:${sample}\tPL:ILLUMINA\tLB:${sample}_lib1" \
-  ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
+  ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa \
   "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_1.trim.fastq.gz "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
   | samtools sort -@ $threads -o "${proj_dir}"/alignments/${sample}_sub.sorted.bam -
 samtools index "${proj_dir}"/alignments/${sample}_sub.sorted.bam
@@ -458,7 +458,7 @@ This is the most consequential design decision in the whole pipeline. There is n
 
 ```bash
 gatk HaplotypeCaller \
-  -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+  -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
   -I "${proj_dir}"/alignments/${sample}_sub.dedup.bam \
   -O "${proj_dir}"/variants/${sample}_sub.g.vcf.gz \
   -ERC GVCF \
@@ -480,7 +480,7 @@ gatk GenomicsDBImport \
   -L Vu03
 
 gatk GenotypeGVCFs \
-  -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+  -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
   -V gendb://${proj_dir}/variants/genomicsdb_Vu03 \
   -O "${proj_dir}"/variants/cowpea_panel_sub.Vu03.vcf.gz
 ```
@@ -518,6 +518,17 @@ gatk VariantFiltration -V "${proj_dir}"/variants/cowpea_panel_sub.Vu03.snps.vcf.
 
 Run the equivalent indel-specific filter set (GATK documents slightly different default thresholds for indels — `QD2`, `FS200`, `ReadPosRankSum-20`, plus `InbreedingCoeff` where applicable) and merge back:
 
+```bash
+gatk VariantFiltration -V "${proj_dir}"/variants/cowpea_panel_sub.Vu03.indels.vcf.gz \
+  --filter-expression "QD < 2.0"                 --filter-name "QD2" \
+  --filter-expression "FS > 200.0"                 --filter-name "FS200" \
+  --filter-expression "MQ < 40.0"                 --filter-name "MQ40" \
+  --filter-expression "MQRankSum < -20.0"         --filter-name "MQRankSum-20" \
+  --filter-expression "ReadPosRankSum < -8.0"     --filter-name "ReadPosRankSum-8" \
+  --filter-expression "SOR > 3.0"                 --filter-name "SOR3" \
+  -O "${proj_dir}"/variants/cowpea_panel_sub.Vu03.indels.filtered.vcf.gz
+```
+
 <details>
     <summary>
         Click to toggle contents of <b style='color:blue'>Docs on `InbreedingCoeff`</b>
@@ -540,11 +551,12 @@ Hard filtering above removes *technically* dubious calls; next we remove sites t
 
 ```bash
 # Normalise VCF
-bcftools norm -f ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+bcftools norm -f ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
   -m -any "${proj_dir}"/variants/cowpea_panel_sub.Vu03.filtered.vcf.gz -Oz \
   -o "${proj_dir}"/variants/cowpea_panel_sub.Vu03.norm.vcf.gz
 # splits multiallelic sites into biallelic records and left-aligns indels — most downstream tools assume this
 
+# Filter
 vcftools --gzvcf "${proj_dir}"/variants/cowpea_panel_sub.Vu03.norm.vcf.gz \
   --max-missing 0.8 --minDP 5 --maf 0.05 --min-alleles 2 --max-alleles 2 \
   --recode --recode-INFO-all --out "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final
@@ -570,7 +582,7 @@ bcftools stats "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf | g
 A whole-genome plant Ts/Tv ratio far below ~2.0–2.1 (typical for most plant genomes) is a red flag for excess false-positive calls dominated by random sequencing error (which is transition/transversion-agnostic, i.e., closer to 0.5).
 
 ### 9.2 Relatedness / identity check (catch sample mix-ups early)
-
+[`PLINK` Documentation](https://plink.readthedocs.io/en/latest/)
 ```bash
 plink --vcf "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf --make-bed --allow-extra-chr --out "${proj_dir}"/variants/cowpea_plink
 plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --out variants/cowpea_pca
@@ -579,7 +591,8 @@ plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --o
 Plot the first two PCs in R:
 
 ```bash
-cat >> "${proj_dir}"/scripts/vcf-kinship-pca-plot.R <<EOF
+cat > "${proj_dir}"/scripts/vcf-kinship-pca-plot.R <<EOF
+library(ggplot2)
 args <- commandArgs(trailingOnly = TRUE)
 proj_dir <- args[1]
 
@@ -587,13 +600,13 @@ pca <- read.table(
     file.path(proj_dir, "variants", "cowpea_pca.eigenvec")
 )
 
-pca <- ggplot(pca, aes(V3, V4)) + 
+pca_plot <- ggplot(pca, aes(V3, V4)) + 
 geom_point() +
 labs(x = "PC1", y = "PC2", title = "Cowpea panel structure (chr Vu03 SNPs; Sub-sampled reads)")
 
 ggsave(
     file.path(proj_dir, "variants", "cowpea_pca.png"),
-    plot = p,
+    plot = pca_plot,
     width = 7,
     height = 5,
     dpi = 600
@@ -616,19 +629,22 @@ Cowpea is not in `SnpEff`'s or `VEP`'s pre-built database catalogues by default.
 ```bash
 # Build custom SnpEff DB
 mkdir -p "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2
-cp ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
-cp ${res_dir}/raw_data/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
-cat >> snpEff.config <<EOF
+cp ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
+cp ${res_dir}/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
+cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
+cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
+
+cat >> "${proj_dir}"/annotation/snpEff.config <<EOF
 Vunguiculata_540_v1.2.genome : Vunguiculata_540_v1.2
 EOF
 
-snpEff build -gff3 -v Vunguiculata_540_v1.2 -c snpEff.config -dataDir "${proj_dir}"/annotation/snpeff_data
+snpEff build -gff3 -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.config -dataDir "${proj_dir}"/annotation/snpeff_data
 ```
 
 ### 10.2 Annotation
 
 ```bash
-snpEff -v Vunguiculata_540_v1.2 -c snpEff.config \
+snpEff -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.config \
   "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf \
   > "${proj_dir}"/annotation/cowpea_panel_sub.Vu03.annotated.vcf
 ```

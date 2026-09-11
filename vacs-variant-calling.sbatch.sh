@@ -13,12 +13,12 @@ set -euo pipefail
 if [ ! -e ~/vacs-bioinfo ]; then
   ln -s /home/douso/vacs-bioinfo ~/vacs-bioinfo
   res_dir="$HOME/vacs-bioinfo/variant-calling"
-  proj_dir="$HOME/projects/vacs-bioinfo/variant-calling"
+  proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
   mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastq_raw,fastq_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
 else
   if [ -e ~/vacs-bioinfo ] && [ ! -L ~/vacs-bioinfo ]; then
     res_dir="$HOME/vacs-bioinfo/variant-calling"
-    proj_dir="$HOME/vacs-bioinfo/variant-calling"
+    proj_dir="/var/scratch/global/$USER/vacs-bioinfo/variant-calling"
   fi
 fi
 
@@ -58,7 +58,7 @@ threads=${SLURM_CPUS_PER_TASK:-$(( ($(nproc) * pct_processor_to_use + 50) / 100 
 n_samples=4
 n_reads=2000000
 
-shuf -n4 "$n_samples" "${res_dir}"/raw_data/metadata/SRR_Acc_List.txt |
+shuf -n "${n_samples}" "${res_dir}/raw_data/metadata/SRR_Acc_List.txt" |
 while read -r samp_id; do
     echo "Sampling $samp_id"
     seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_1.fastq.gz $n_reads | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_1.fastq.gz
@@ -96,12 +96,12 @@ multiqc "${proj_dir}"/qc/fastqc_trim -o "${proj_dir}"/qc/fastqc_trim
 
 # Indexing
 cd "${proj_dir}"/raw_data/reference
-bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
-"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz
-samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz.fai \
-"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz # requires a bgzip-compressed ref
-gatk CreateSequenceDictionary -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
--O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.dict
+bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa \
+"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz
+samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz.fai \
+"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz # requires a bgzip-compressed ref
+gatk CreateSequenceDictionary -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
+-O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.dict
 
 # Align
 counter1=0
@@ -110,7 +110,7 @@ for sample in "${samples[@]}"; do
   echo "Currently aligning sample ${sample}... (${counter1}/${#samples[@]})"
   bwa mem -t $threads \
     -R "@RG\tID:${sample}\tSM:${sample}\tPL:ILLUMINA\tLB:${sample}_lib1" \
-    "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa \
+    "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa \
     "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_1.trim.fastq.gz "${proj_dir}"/raw_data/fastq/trimmed/${sample}_sub_2.trim.fastq.gz \
     | samtools sort -@ $threads -o "${proj_dir}"/alignments/${sample}_sub.sorted.bam -
   samtools index "${proj_dir}"/alignments/${sample}_sub.sorted.bam
@@ -140,7 +140,7 @@ for sample in "${samples[@]}"; do
   ((counter2 += 1))
   echo "Currently variant calling sample ${sample}... (${counter2}/${#samples[@]})"
   gatk HaplotypeCaller \
-    -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+    -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
     -I "${proj_dir}"/alignments/${sample}_sub.dedup.bam \
     -O "${proj_dir}"/variants/${sample}_sub.g.vcf.gz \
     -ERC GVCF \
@@ -154,7 +154,7 @@ gatk GenomicsDBImport \
   -L Vu03
 
 gatk GenotypeGVCFs \
-  -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+  -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
   -V gendb://"${proj_dir}"/variants/genomicsdb_Vu03 \
   -O "${proj_dir}"/variants/cowpea_panel_sub.Vu03.vcf.gz
 
@@ -173,13 +173,22 @@ gatk VariantFiltration -V "${proj_dir}"/variants/cowpea_panel_sub.Vu03.snps.vcf.
   --filter-expression "SOR > 3.0"                 --filter-name "SOR3" \
   -O "${proj_dir}"/variants/cowpea_panel_sub.Vu03.snps.filtered.vcf.gz
 
+gatk VariantFiltration -V "${proj_dir}"/variants/cowpea_panel_sub.Vu03.indels.vcf.gz \
+  --filter-expression "QD < 2.0"                 --filter-name "QD2" \
+  --filter-expression "FS > 200.0"                 --filter-name "FS200" \
+  --filter-expression "MQ < 40.0"                 --filter-name "MQ40" \
+  --filter-expression "MQRankSum < -20.0"         --filter-name "MQRankSum-20" \
+  --filter-expression "ReadPosRankSum < -8.0"     --filter-name "ReadPosRankSum-8" \
+  --filter-expression "SOR > 3.0"                 --filter-name "SOR3" \
+  -O "${proj_dir}"/variants/cowpea_panel_sub.Vu03.indels.filtered.vcf.gz
+
 # VCF merging
 gatk MergeVcfs -I "${proj_dir}"/variants/cowpea_panel_sub.Vu03.snps.filtered.vcf.gz \
                -I "${proj_dir}"/variants/cowpea_panel_sub.Vu03.indels.filtered.vcf.gz \
                -O "${proj_dir}"/variants/cowpea_panel_sub.Vu03.filtered.vcf.gz
 
-# Population-level filtering: normalise
-bcftools norm -f "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz \
+# Normalise VCF
+bcftools norm -f "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
   -m -any "${proj_dir}"/variants/cowpea_panel_sub.Vu03.filtered.vcf.gz -Oz \
   -o "${proj_dir}"/variants/cowpea_panel_sub.Vu03.norm.vcf.gz
 
@@ -192,11 +201,11 @@ vcftools --gzvcf "${proj_dir}"/variants/cowpea_panel_sub.Vu03.norm.vcf.gz \
 bcftools stats "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf | grep "ts/tv" > "${proj_dir}"/qc/cowpea_panel_sub.Vu03.final.recode.ts-tv-ratios.txt
 
 # SanityQC: Relatedness / Redundancy
-[PLINK Documentation](https://plink.readthedocs.io/en/latest/)
 plink --vcf "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf --make-bed --allow-extra-chr --out "${proj_dir}"/variants/cowpea_plink
-plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --out variants/cowpea_pca
+plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --out "${proj_dir}"/variants/cowpea_pca
 
-cat >> "${proj_dir}"/scripts/vcf-kinship-pca-plot.R <<EOF
+cat > "${proj_dir}"/scripts/vcf-kinship-pca-plot.R <<EOF
+library(ggplot2)
 args <- commandArgs(trailingOnly = TRUE)
 proj_dir <- args[1]
 
@@ -204,13 +213,13 @@ pca <- read.table(
     file.path(proj_dir, "variants", "cowpea_pca.eigenvec")
 )
 
-pca <- ggplot(pca, aes(V3, V4)) +
+pca_plot <- ggplot(pca, aes(V3, V4)) +
 geom_point() +
 labs(x = "PC1", y = "PC2", title = "Cowpea panel structure (chr Vu03 SNPs; Sub-sampled reads)")
 
 ggsave(
     file.path(proj_dir, "variants", "cowpea_pca.png"),
-    plot = p,
+    plot = pca_plot,
     width = 7,
     height = 5,
     dpi = 600
@@ -221,16 +230,19 @@ Rscript "${proj_dir}"/scripts/vcf-kinship-pca-plot.R "${proj_dir}"
 
 # Variants annotation: Build custom SnpEff DB
 mkdir -p "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2
-cp "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.0.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
-cp "${res_dir}"/raw_data/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
-cat >> snpEff.config <<EOF
+cp "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
+cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
+cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
+cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
+
+cat >> "${proj_dir}"/annotation/snpEff.config <<EOF
 Vunguiculata_540_v1.2.genome : Vunguiculata_540_v1.2
 EOF
 
-snpEff build -gff3 -v Vunguiculata_540_v1.2 -c snpEff.config -dataDir "${proj_dir}"/annotation/snpeff_data
+snpEff build -gff3 -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.config -dataDir "${proj_dir}"/annotation/snpeff_data
 
 # Variants annotation: Annotate
-snpEff -v Vunguiculata_540_v1.2 -c snpEff.config \
+snpEff -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.config \
   "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf \
   > "${proj_dir}"/annotation/cowpea_panel_sub.Vu03.annotated.vcf
 
