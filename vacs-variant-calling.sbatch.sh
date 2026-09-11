@@ -12,7 +12,7 @@ set -euo pipefail
 # Setup: Proj Org; FS structure, Link resource directory (contain universal [shared] files: data, tools)
 res_dir="$HOME/vacs-bioinfo/variant-calling"
 proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
-rm -r "${proj_dir}"
+rm -rf "${proj_dir}"
 mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastqc_raw,fastqc_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
 
 if [ ! -e ~/vacs-bioinfo ]; then
