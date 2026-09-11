@@ -184,7 +184,7 @@ Most HPCs offer both an environment-module system (`module load bwa/0.7.17`) and
 ```bash
 # One-time setup (interactive or login node — never on a compute node without checking policy)
 module load miniforge3 2>/dev/null || echo "Your Sys Admin prefers a lean HPC, no system-wide conda/mamba support - figure it out" # check conda/mamba support
-#mamba env create -f envs/requirements.yaml
+#mamba env create -f "${res_dir}/envs/requirements.yaml"
 #mamba activate varcall
 
 # Ad-hoc setup
@@ -224,21 +224,17 @@ set -euo pipefail
 
 ```bash
 # Setup: Proj Org; FS structure, Link resource directory (contain universal [shared] files: data, tools)
+res_dir="$HOME/vacs-bioinfo/variant-calling"
+proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
+mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastqc_raw,fastqc_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
+
 if [ ! -e ~/vacs-bioinfo ]; then
   ln -s /var/scratch/global/douso/vacs-bioinfo ~
-  res_dir="${HOME}/vacs-bioinfo/variant-calling"
-  proj_dir="/var/scratch/global/${USER}/projects/vacs-bioinfo/variant-calling"
-  mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastq_raw,fastq_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
-else
-  if [ -e ~/vacs-bioinfo ] && [ ! -L ~/vacs-bioinfo ]; then
-    res_dir="${HOME}/vacs-bioinfo/variant-calling"
-    proj_dir="/var/scratch/global/${USER}/vacs-bioinfo/variant-calling"
-  fi
 fi
 
 # Setup: Load modules
 module load miniforge3 2>/dev/null || echo "Your Sys Admin prefers a lean HPC, no system-wide conda/mamba support - figure it out" # check conda/mamba support
-##mamba env create -f envs/variant_calling.yml
+##mamba env create -f "{res_dir}/envs/requirements.yaml"
 ##mamba activate varcall
 
 # Ad-hoc setup for env: miniforge management
@@ -248,8 +244,8 @@ mamba activate /var/scratch/global/douso/vacs/varcall/envs # env identified by p
 
 # Ad-hoc setup for env: R
 export PATH=/var/scratch/global/douso/vacs-bioinfo/.local/bin/R/bin:$PATH
-export res_dir=/var/scratch/global/douso/vacs-bioinfo/variant-calling
-export proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
+export res_dir
+export proj_dir
 
 # Setup: Threads
 pct_processor_to_use=75 # the percentage of your local compute (PC) resources to commit for the analysis
@@ -301,9 +297,11 @@ done < "${proj_dir}"/raw_data/metadata/SRR_Acc_List.txt
 ```bash
 n_samples=1
 n_reads=2000000
+cat > "${proj_dir}"/raw_data/metadata/SRR_Acc_List_sub.txt
 
 shuf -n "$n_samples" "${res_dir}"/raw_data/metadata/SRR_Acc_List.txt |
 while read -r samp_id; do
+    samp_id=${samp_id//$'\r'/}
     echo "Sampling $samp_id"
     seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_1.fastq.gz $n_reads | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_1.fastq.gz
     seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_2.fastq.gz $n_reads | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_2.fastq.gz && \    
@@ -373,12 +371,14 @@ multiqc "${proj_dir}"/qc/fastqc_trim -o "${proj_dir}"/qc/fastqc_trim
 ### 5.1 Index the reference (once)
 
 ```bash
-cd "${proj_dir}"/raw_data/reference
+cp ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/raw_data/reference/assembly
+
+cd "${proj_dir}"/raw_data/reference/assembly
 bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa \
-${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz 
+${proj_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz 
 samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz.fai \
-${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz # requires a bgzip-compressed ref
-gatk CreateSequenceDictionary -R ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
+${proj_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz # requires a bgzip-compressed ref
+gatk CreateSequenceDictionary -R ${proj_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
 -O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.dict
 ```
 
@@ -630,9 +630,11 @@ Cowpea is not in `SnpEff`'s or `VEP`'s pre-built database catalogues by default.
 
 ```bash
 # Build custom SnpEff DB
+cp ${res_dir}/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/raw_data/reference/annotation
+
 mkdir -p "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2
-cp ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
-cp ${res_dir}/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
+cp "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
+cp "${proj_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
 cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
 cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
 

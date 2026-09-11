@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --job-name=cowpea_varcall_4samps
+#SBATCH --job-name=cowpea-10-full-vc
 #SBATCH --partition=batch          # ask your HPC docs for the right queue
 #SBATCH --nodelist=compute05
 #SBATCH --cpus-per-task=8
@@ -10,26 +10,23 @@
 set -euo pipefail
 
 # Setup: Proj Org; FS structure, Link resource directory (contain universal [shared] files: data, tools)
+res_dir="$HOME/vacs-bioinfo/variant-calling"
+proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
+rm -r "${proj_dir}"
+mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastqc_raw,fastqc_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
+
 if [ ! -e ~/vacs-bioinfo ]; then
-  ln -s /var/scratch/global/douso/vacs-bioinfo
-  res_dir="$HOME/vacs-bioinfo/variant-calling"
-  proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
-  mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastq_raw,fastq_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
-else
-  if [ -e ~/vacs-bioinfo ] && [ ! -L ~/vacs-bioinfo ]; then
-    res_dir="$HOME/vacs-bioinfo/variant-calling"
-    proj_dir="/var/scratch/global/$USER/vacs-bioinfo/variant-calling"
-  fi
+  ln -s /var/scratch/global/douso/vacs-bioinfo ~
 fi
 
 # Setup: Load modules
 module load miniforge3 2>/dev/null || echo "Your Sys Admin prefers a lean HPC, no system-wide conda/mamba support - figure it out" # check conda/mamba support
-##mamba env create -f envs/requirements.yaml
+##mamba env create -f "${res_dir}/envs/requirements.yaml"
 ##mamba activate varcall
 
 # Ad-hoc setup for env: miniforge management
-export MAMBA_ROOT_PREFIX="${HOME}"/vacs-bioinfo/.local/bin/miniforge3
-source "${MAMBA_ROOT_PREFIX}"/etc/profile.d/mamba.sh # we will share a single environment - avoid redundancy; resource efficiency
+export MAMBA_ROOT_PREFIX="${HOME}/vacs-bioinfo/.local/bin/miniforge3"
+source "${MAMBA_ROOT_PREFIX}/etc/profile.d/mamba.sh" # we will share a single environment - avoid redundancy; resource efficiency
 mamba activate /var/scratch/global/douso/vacs/varcall/envs # env identified by path rather than name
 
 # Ad-hoc setup for env: R
@@ -55,14 +52,17 @@ threads=${SLURM_CPUS_PER_TASK:-$(( ($(nproc) * pct_processor_to_use + 50) / 100 
 #done < "${proj_dir}"/raw_data/metadata/SRR_Acc_List.txt
 
 #  Sub-sample accessions
-n_samples=4
+n_samples=10
 n_reads=2000000
-
+cat > "${proj_dir}"/raw_data/metadata/SRR_Acc_List_sub.txt
 shuf -n "${n_samples}" "${res_dir}/raw_data/metadata/SRR_Acc_List.txt" |
 while read -r samp_id; do
-    echo "Sampling $samp_id"
-    seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_1.fastq.gz $n_reads | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_1.fastq.gz
-    seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_2.fastq.gz $n_reads | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_2.fastq.gz && \
+    samp_id=${samp_id//$'\r'/}
+    cp "${res_dir}"/raw_data/fastq/${samp_id}_1.fastq.gz "${proj_dir}"/raw_data/fastq/${samp_id}_sub_1.fastq.gz
+    cp "${res_dir}"/raw_data/fastq/${samp_id}_2.fastq.gz "${proj_dir}"/raw_data/fastq/${samp_id}_sub_2.fastq.gz
+#    echo "Sampling $samp_id"
+#    seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_1.fastq.gz "$n_reads" | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_1.fastq.gz
+#    seqtk sample -s100 "${res_dir}"/raw_data/fastq/${samp_id}_2.fastq.gz "$n_reads" | gzip -c > "${proj_dir}"/raw_data/fastq/${samp_id}_sub_2.fastq.gz && \
     echo "${samp_id}" >> "${proj_dir}"/raw_data/metadata/SRR_Acc_List_sub.txt # a file to log our sampled accessions
 done
 
@@ -95,12 +95,14 @@ fastqc -t $threads -o "${proj_dir}"/qc/fastqc_trim "${proj_dir}"/raw_data/fastq/
 multiqc "${proj_dir}"/qc/fastqc_trim -o "${proj_dir}"/qc/fastqc_trim
 
 # Indexing
-cd "${proj_dir}"/raw_data/reference
+cp ${res_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/raw_data/reference/assembly
+
+cd "${proj_dir}"/raw_data/reference/assembly
 bwa index -p "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa \
-"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz
+${proj_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz
 samtools faidx -o "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz.fai \
-"${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz # requires a bgzip-compressed ref
-gatk CreateSequenceDictionary -R "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
+${proj_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz # requires a bgzip-compressed ref
+gatk CreateSequenceDictionary -R ${proj_dir}/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz \
 -O "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.dict
 
 # Align
@@ -229,9 +231,11 @@ EOF
 Rscript "${proj_dir}"/scripts/vcf-kinship-pca-plot.R "${proj_dir}"
 
 # Variants annotation: Build custom SnpEff DB
+cp ${res_dir}/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/raw_data/reference/annotation
+
 mkdir -p "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2
-cp "${res_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
-cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
+cp "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
+cp "${proj_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
 cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
 cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
 
