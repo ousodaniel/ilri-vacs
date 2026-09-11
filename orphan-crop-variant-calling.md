@@ -248,7 +248,7 @@ mamba activate /var/scratch/global/douso/vacs/varcall/envs # env identified by p
 
 # Ad-hoc setup for env: R
 export PATH=/var/scratch/global/douso/vacs-bioinfo/.local/bin/R/bin:$PATH
-export res_dir=/var/scratch/global/douso/vacs-bioinfo/variant-calling"
+export res_dir=/var/scratch/global/douso/vacs-bioinfo/variant-calling
 export proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
 
 # Setup: Threads
