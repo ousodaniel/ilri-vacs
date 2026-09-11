@@ -226,13 +226,13 @@ set -euo pipefail
 # Setup: Proj Org; FS structure, Link resource directory (contain universal [shared] files: data, tools)
 if [ ! -e ~/vacs-bioinfo ]; then
   ln -s /var/scratch/global/douso/vacs-bioinfo ~
-  res_dir="$HOME/vacs-bioinfo/variant-calling"
-  proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
+  res_dir="${HOME}/vacs-bioinfo/variant-calling"
+  proj_dir="/var/scratch/global/${USER}/projects/vacs-bioinfo/variant-calling"
   mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastq_raw,fastq_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
 else
   if [ -e ~/vacs-bioinfo ] && [ ! -L ~/vacs-bioinfo ]; then
-    res_dir="$HOME/vacs-bioinfo/variant-calling"
-    proj_dir="/var/scratch/global/$USER//vacs-bioinfo/variant-calling"
+    res_dir="${HOME}/vacs-bioinfo/variant-calling"
+    proj_dir="/var/scratch/global/${USER}/vacs-bioinfo/variant-calling"
   fi
 fi
 
@@ -248,7 +248,7 @@ mamba activate /var/scratch/global/douso/vacs/varcall/envs # env identified by p
 
 # Ad-hoc setup for env: R
 export PATH=/var/scratch/global/douso/vacs-bioinfo/.local/bin/R/bin:$PATH
-export res_dir="$HOME/vacs-bioinfo/variant-calling"
+export res_dir=/var/scratch/global/douso/vacs-bioinfo/variant-calling"
 export proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
 
 # Setup: Threads
