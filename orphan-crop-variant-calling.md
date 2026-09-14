@@ -295,7 +295,7 @@ done < "${proj_dir}"/raw_data/metadata/SRR_Acc_List.txt
 **Design choice — why subsample reads, not just subsample samples/accessions:** even a single 10–15X WGS accession is tens of millions of read pairs. For a workshop (constrained setting; e.g. laptop), we additionally subsample reads *and* restrict to chromosome `Vu03` (see Module 5) so each participant's jobs return in minutes rather than hours:
 
 ```bash
-n_samples=1
+n_samples=2
 n_reads=2000000
 cat > "${proj_dir}"/raw_data/metadata/SRR_Acc_List_sub.txt
 
