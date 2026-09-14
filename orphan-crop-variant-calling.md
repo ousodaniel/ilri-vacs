@@ -587,7 +587,7 @@ A whole-genome plant Ts/Tv ratio far below ~2.0–2.1 (typical for most plant ge
 [`PLINK` Documentation](https://plink.readthedocs.io/en/latest/)
 ```bash
 plink --vcf "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf --make-bed --allow-extra-chr --out "${proj_dir}"/variants/cowpea_plink
-plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --out variants/cowpea_pca
+plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --mind 0.01 --out "${proj_dir}"/variants/cowpea_pca
 ```
 
 Plot the first two PCs in R:
@@ -630,13 +630,14 @@ Cowpea is not in `SnpEff`'s or `VEP`'s pre-built database catalogues by default.
 
 ```bash
 # Build custom SnpEff DB
+cp ${res_dir}/annotation/snpeff_data/snpEff.config "${proj_dir}"/annotation/snpeff_data/
 cp ${res_dir}/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/raw_data/reference/annotation
 
 mkdir -p "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2
 cp "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
 cp "${proj_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
-cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
-cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
+cp "${res_dir}"/raw_data/reference/annotation/protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
+cp "${res_dir}"/raw_data/reference/annotation/cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
 
 cat >> "${proj_dir}"/annotation/snpEff.config <<EOF
 Vunguiculata_540_v1.2.genome : Vunguiculata_540_v1.2
@@ -650,6 +651,7 @@ snpEff build -gff3 -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.c
 ```bash
 snpEff -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.config \
   "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf \
+  -dataDir "${proj_dir}"/annotation/snpeff_data \
   > "${proj_dir}"/annotation/cowpea_panel_sub.Vu03.annotated.vcf
 ```
 

@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Setup: Proj Org; FS structure, Link resource directory (contain universal [shared] files: data, tools)
-res_dir="$HOME/vacs-bioinfo/variant-calling"
+res_dir="/var/scratch/global/douso/vacs-bioinfo/variant-calling"
 proj_dir="/var/scratch/global/$USER/projects/vacs-bioinfo/variant-calling"
 rm -rf "${proj_dir}"
 mkdir -p "${proj_dir}"/{alignments,annotation/snpeff_data,env,logs,qc/{fastqc_raw,fastqc_trim},raw_data/{fasta,fastq/trimmed,metadata,reference/{assembly,annotation}},scripts,variants}
@@ -50,7 +50,7 @@ threads=${SLURM_CPUS_PER_TASK:-$(( ($(nproc) * pct_processor_to_use + 50) / 100 
 #done < "${proj_dir}"/raw_data/metadata/SRR_Acc_List.txt
 
 #  Sub-sample accessions
-n_samples=10
+n_samples=20
 n_reads=2000000
 cat > "${proj_dir}"/raw_data/metadata/SRR_Acc_List_sub.txt
 
@@ -200,7 +200,7 @@ bcftools stats "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf | g
 
 # SanityQC: Relatedness / Redundancy
 plink --vcf "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf --make-bed --allow-extra-chr --out "${proj_dir}"/variants/cowpea_plink
-plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --out "${proj_dir}"/variants/cowpea_pca
+plink --bfile "${proj_dir}"/variants/cowpea_plink --allow-extra-chr --pca 10 --mind 0.01 --out "${proj_dir}"/variants/cowpea_pca
 
 cat > "${proj_dir}"/scripts/vcf-kinship-pca-plot.R <<EOF
 library(ggplot2)
@@ -227,13 +227,14 @@ EOF
 Rscript "${proj_dir}"/scripts/vcf-kinship-pca-plot.R "${proj_dir}"
 
 # Variants annotation: Build custom SnpEff DB
+cp ${res_dir}/annotation/snpeff_data/snpEff.config "${proj_dir}"/annotation
 cp ${res_dir}/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/raw_data/reference/annotation
 
 mkdir -p "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2
 cp "${proj_dir}"/raw_data/reference/assembly/Vunguiculata_540_v1.2.fa.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/sequences.fa.gz
 cp "${proj_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.gene.gff3.gz "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/genes.gff.gz
-cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
-cp "${res_dir}"/raw_data/reference/annotation/Vunguiculata_540_v1.2.cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
+cp "${res_dir}"/raw_data/reference/annotation/protein.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/protein.fa
+cp "${res_dir}"/raw_data/reference/annotation/cds.fa "${proj_dir}"/annotation/snpeff_data/Vunguiculata_540_v1.2/cds.fa
 
 cat >> "${proj_dir}"/annotation/snpEff.config <<EOF
 Vunguiculata_540_v1.2.genome : Vunguiculata_540_v1.2
@@ -244,6 +245,7 @@ snpEff build -gff3 -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.c
 # Variants annotation: Annotate
 snpEff -v Vunguiculata_540_v1.2 -c "${proj_dir}"/annotation/snpEff.config \
   "${proj_dir}"/variants/cowpea_panel_sub.Vu03.final.recode.vcf \
+  -dataDir "${proj_dir}"/annotation/snpeff_data \
   > "${proj_dir}"/annotation/cowpea_panel_sub.Vu03.annotated.vcf
 
 # Interpreting SnpEff annotation: Subset impactful annotations
