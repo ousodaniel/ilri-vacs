@@ -256,3 +256,6 @@ zgrep "Vigun03g220400" "${res_dir}"/raw_data/reference/annotation/Vunguiculata_5
 
 bedtools intersect -a "${proj_dir}"/annotation/cowpea_panel_sub.Vu03.highmod.vcf -b "${proj_dir}"/annotation/candidate_gene.bed -header \
   > "${proj_dir}"/annotation/candidate_gene.variants.vcf
+
+
+echo "Congratulations! You just completed a full variant calling analysis pipeline!!"
