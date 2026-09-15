@@ -1,4 +1,7 @@
 # From Field to FASTA to Function
+---
+***Trainer: OUSO | [LinkedIn](https://github.com/ousodaniel) | [GitHub](https://github.com/ousodaniel)***
+
 ### A Hands-On Variant Discovery Tutorial Using Cowpea (*Vigna unguiculata*), an African Orphan Legume
 
 **Audience:** plant breeders and agricultural scientists comfortable navigating Linux, but not necessarily fluent in bioinformatics pipeline design.
@@ -712,23 +715,6 @@ For those wanting to continue past this workshop into formal association mapping
 ## Pipeline Recap Diagram
 ![Variant discovery pipeline](variant-calling.png)
 
-<!--
-    A[Experimental Design\nMinicore-style diversity panel] --> B[Reference genome\nIT97K-499-35 vQnBW, LIS mirror]
-    A --> C[Resequencing data\n37 samples/accessions, SRP077082]
-    B --> D[QC & Trimming\nFastQC / fastp]
-    C --> D
-    D --> E[Alignment\nBWA-MEM + read groups]
-    E --> F[Mark Duplicates\nGATK Picard]
-    F --> G[Per-sample Calling\nHaplotypeCaller GVCF]
-    G --> H[Joint Genotyping\nGenomicsDBImport + GenotypeGVCFs]
-    H --> I[Hard Filtering\nGATK VariantFiltration\n no VQSR: no truth set]
-    I --> J[Population Filtering\nbcftools norm + vcftools]
-    J --> K[Sanity Checks\nTs/Tv, PCA/relatedness]
-    K --> L[Annotation\nCustom SnpEff DB]
-    L --> M[Candidate Gene Interpretation\nVigun03g220400 region, IGV review]
-    M --> N[Hypothesis for QTL mapping / GWAS / validation]
--->
-
 ---
 
 ## Generalising Beyond Cowpea
@@ -834,22 +820,22 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - sra-tools>=3.1
-  - fastqc>=0.12
-  - fastp>=0.23
-  - multiqc>=1.20
-  - bwa>=0.7.17
-  - samtools>=1.19
-  - gatk4>=4.5
-  - bcftools>=1.19
-  - vcftools>=0.1.16
-  - bedtools>=2.31
-  - plink
-  - snpeff>=5.2
-  - mosdepth>=0.3.6
-  - seqtk
+  - sra-tools==3.4.1
+  - fastqc==0.12.1
+  - fastp==1.3.6
+  - multiqc==1.35
+  - bwa==0.7.19
+  - samtools==1.24
+  - gatk4==4.6.2.0
+  - bcftools==1.24
+  - vcftools==0.1.17
+  - bedtools==2.31.1
+  - plink==1.90b7.7
+  - snpeff==5.4.0c
+  - mosdepth==0.3.14
+  - seqtk==1.5
   - igv
-  - r-base>=4.3
+  - r-base==4.6.1
   - r-ggplot2
   - r-vcfr
 ```
