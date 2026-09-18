@@ -224,7 +224,7 @@ set -euo pipefail
 ---
 
 ### 2.4 Environment setup (Linux)
-
+For this tutorial's sake we will use a pre-configured environment in the HPC. You will have to set up a little differently in your local compute resource. [Conda/Mamba Ecosystem](https://docs.conda.io/en/latest/) | [Miniforge](https://github.com/conda-forge/miniforge).
 ```bash
 # Setup: Proj Org; FS structure, Link resource directory (contain universal [shared] files: data, tools)
 res_dir="$HOME/vacs-bioinfo/variant-calling"
